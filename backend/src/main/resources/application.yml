@@ -23,11 +23,20 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
         use_sql_comments: true
+  
+  # Flyway Database Migration
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    clean-disabled: false
+    locations: classpath:db/migration
+    schemas: public
+    default-schema: public
 
 # AWS S3 Configuration
 aws:
@@ -58,6 +67,12 @@ info:
     name: RapidPhotoUpload
     description: High-performance asynchronous photo upload system
     version: 1.0.0-SNAPSHOT
+
+# Logging Configuration
+logging:
+  level:
+    org.flywaydb: DEBUG
+    org.flywaydb.core.internal.command: DEBUG
 
 
 

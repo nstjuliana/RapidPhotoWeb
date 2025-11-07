@@ -7,12 +7,16 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 /**
- * Configuration for AWS S3 client.
+ * Configuration for AWS S3 client and presigner.
  * 
- * Creates and configures the S3Client bean used for interacting with AWS S3.
+ * Creates and configures the S3Client and S3Presigner beans used for interacting with AWS S3.
  * Credentials and region are loaded from environment variables or application properties.
+ * 
+ * @author RapidPhotoUpload Team
+ * @since 1.0.0
  */
 @Configuration
 public class S3Config {
@@ -45,6 +49,28 @@ public class S3Config {
         AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
         
         return S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
+                .build();
+    }
+    
+    /**
+     * Creates and configures the S3Presigner bean for generating presigned URLs.
+     * 
+     * @return Configured S3Presigner instance
+     */
+    @Bean
+    public S3Presigner s3Presigner() {
+        if (accessKey == null || accessKey.isEmpty() || 
+            secretKey == null || secretKey.isEmpty()) {
+            return S3Presigner.builder()
+                    .region(Region.of(region))
+                    .build();
+        }
+        
+        AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKey, secretKey);
+        
+        return S3Presigner.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
                 .build();
