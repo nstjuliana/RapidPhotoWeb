@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "@/components/providers";
 
 /**
  * Root layout component for RapidPhotoUpload web application.
  * 
  * Provides the base HTML structure and global styles for all pages.
+ * Wraps the application with TanStack Query provider.
  */
 export const metadata: Metadata = {
   title: "RapidPhotoUpload",
@@ -19,7 +21,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
