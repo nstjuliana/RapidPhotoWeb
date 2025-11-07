@@ -43,7 +43,7 @@ public class PhotoJpaEntity {
     @Column(name = "upload_date", nullable = false)
     private LocalDateTime uploadDate;
     
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "photo_tags", joinColumns = @JoinColumn(name = "photo_id"))
     @Column(name = "tag", length = 100)
     private Set<String> tags = new HashSet<>();

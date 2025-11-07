@@ -42,7 +42,15 @@ public class PhotoJpaAdapter implements PhotoRepository {
     
     @Override
     public Mono<Photo> findById(PhotoId id) {
-        return Mono.fromCallable(() -> jpaRepository.findById(id.getValue()))
+        return Mono.fromCallable(() -> {
+                    var optional = jpaRepository.findById(id.getValue());
+                    // Access tags while still in transaction context to avoid LazyInitializationException
+                    return optional.map(entity -> {
+                        // Force initialization of lazy collection while session is open
+                        entity.getTags().size();
+                        return entity;
+                    });
+                })
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMap(optional -> optional.map(entity -> Mono.just(toDomain(entity)))
                         .orElse(Mono.empty()));
@@ -50,7 +58,12 @@ public class PhotoJpaAdapter implements PhotoRepository {
     
     @Override
     public Flux<Photo> findByUserId(UserId userId) {
-        return Mono.fromCallable(() -> jpaRepository.findByUserId(userId.getValue()))
+        return Mono.fromCallable(() -> {
+                    var entities = jpaRepository.findByUserId(userId.getValue());
+                    // Force initialization of lazy collections while session is open
+                    entities.forEach(entity -> entity.getTags().size());
+                    return entities;
+                })
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMapMany(entities -> Flux.fromIterable(entities)
                         .map(this::toDomain));
@@ -58,7 +71,12 @@ public class PhotoJpaAdapter implements PhotoRepository {
     
     @Override
     public Flux<Photo> findAll() {
-        return Mono.fromCallable(() -> jpaRepository.findAll())
+        return Mono.fromCallable(() -> {
+                    var entities = jpaRepository.findAll();
+                    // Force initialization of lazy collections while session is open
+                    entities.forEach(entity -> entity.getTags().size());
+                    return entities;
+                })
                 .subscribeOn(Schedulers.boundedElastic())
                 .flatMapMany(entities -> Flux.fromIterable(entities)
                         .map(this::toDomain));
