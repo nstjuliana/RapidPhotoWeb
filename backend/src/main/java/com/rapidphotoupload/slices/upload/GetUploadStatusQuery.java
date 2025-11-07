@@ -1,4 +1,4 @@
-package com.rapidphotoupload.application.queries.upload;
+package com.rapidphotoupload.slices.upload;
 
 import com.rapidphotoupload.domain.photo.PhotoId;
 

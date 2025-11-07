@@ -1,17 +1,9 @@
-package com.rapidphotoupload.infrastructure.web.controllers;
+package com.rapidphotoupload.slices.upload;
 
-import com.rapidphotoupload.application.commands.upload.UploadPhotoCommand;
-import com.rapidphotoupload.application.commands.upload.UploadPhotoCommandHandler;
-import com.rapidphotoupload.application.queries.upload.GetUploadStatusQuery;
-import com.rapidphotoupload.application.queries.upload.GetUploadStatusQueryHandler;
 import com.rapidphotoupload.domain.photo.Photo;
 import com.rapidphotoupload.domain.photo.PhotoId;
 import com.rapidphotoupload.domain.photo.PhotoRepository;
 import com.rapidphotoupload.domain.user.UserId;
-import com.rapidphotoupload.infrastructure.web.dto.UploadFailureDto;
-import com.rapidphotoupload.infrastructure.web.dto.UploadRequestDto;
-import com.rapidphotoupload.infrastructure.web.dto.UploadResponseDto;
-import com.rapidphotoupload.infrastructure.web.dto.UploadStatusDto;
 import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;

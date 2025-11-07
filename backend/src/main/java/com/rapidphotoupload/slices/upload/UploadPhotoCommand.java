@@ -1,4 +1,4 @@
-package com.rapidphotoupload.application.commands.upload;
+package com.rapidphotoupload.slices.upload;
 
 import com.rapidphotoupload.domain.user.UserId;
 import com.rapidphotoupload.shared.exceptions.ValidationException;

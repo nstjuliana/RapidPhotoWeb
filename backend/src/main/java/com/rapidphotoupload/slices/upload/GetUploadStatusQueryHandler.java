@@ -1,8 +1,7 @@
-package com.rapidphotoupload.application.queries.upload;
+package com.rapidphotoupload.slices.upload;
 
 import com.rapidphotoupload.domain.photo.Photo;
 import com.rapidphotoupload.domain.photo.PhotoRepository;
-import com.rapidphotoupload.infrastructure.web.dto.UploadStatusDto;
 import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-package com.rapidphotoupload.infrastructure.web.dto;
+package com.rapidphotoupload.slices.upload;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

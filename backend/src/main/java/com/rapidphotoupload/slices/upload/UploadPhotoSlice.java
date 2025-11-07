@@ -1,4 +1,4 @@
-package com.rapidphotoupload.application.commands.upload;
+package com.rapidphotoupload.slices.upload;
 
 /**
  * Upload Photo Vertical Slice Architecture (VSA) Documentation.
@@ -13,10 +13,10 @@ package com.rapidphotoupload.application.commands.upload;
  * 
  * This feature slice contains all layers needed for photo upload functionality:
  * 
- * 1. INFRASTRUCTURE/WEB LAYER (Entry Point)
+ * 1. WEB/API LAYER (Entry Point)
  *    - UploadController: REST API endpoints
- *    - DTOs: UploadRequestDto, UploadResponseDto, UploadStatusDto, ErrorResponseDto
- *    - GlobalExceptionHandler: Centralized error handling
+ *    - DTOs: UploadRequestDto, UploadResponseDto, UploadStatusDto, UploadFailureDto
+ *    - GlobalExceptionHandler: Centralized error handling (shared infrastructure)
  * 
  * 2. APPLICATION LAYER (Orchestration)
  *    - UploadPhotoCommand: Command object with validation
@@ -24,14 +24,14 @@ package com.rapidphotoupload.application.commands.upload;
  *    - GetUploadStatusQuery: Query object
  *    - GetUploadStatusQueryHandler: Handles status queries
  * 
- * 3. DOMAIN LAYER (Business Logic)
+ * 3. DOMAIN LAYER (Business Logic - Shared)
  *    - Photo: Domain entity with business rules
  *    - PhotoId: Value object for type safety
  *    - PhotoRepository: Domain repository interface
  *    - UploadJob: Domain entity for batch tracking
  *    - UploadJobRepository: Domain repository interface
  * 
- * 4. INFRASTRUCTURE LAYER (Implementation)
+ * 4. INFRASTRUCTURE LAYER (Implementation - Shared)
  *    - PhotoJpaAdapter: JPA implementation of PhotoRepository
  *    - UploadJobJpaAdapter: JPA implementation of UploadJobRepository
  *    - S3StorageService: S3 implementation of StorageAdapter
@@ -46,7 +46,7 @@ package com.rapidphotoupload.application.commands.upload;
  *    Headers: x-user-id: {userId}
  *    Body: { filename, contentType, fileSize, tags }
  * 
- * 2. INFRASTRUCTURE/WEB LAYER
+ * 2. WEB/API LAYER
  *    UploadController.initiateUpload()
  *    - Validates request DTO (@Valid)
  *    - Extracts userId from header
@@ -93,7 +93,7 @@ package com.rapidphotoupload.application.commands.upload;
  * 1. CLIENT REQUEST
  *    GET /api/uploads/{photoId}/status
  * 
- * 2. INFRASTRUCTURE/WEB LAYER
+ * 2. WEB/API LAYER
  *    UploadController.getUploadStatus()
  *    - Parses photoId from path
  *    - Creates Query object
@@ -127,7 +127,7 @@ package com.rapidphotoupload.application.commands.upload;
  * 1. CLIENT REQUEST (after S3 upload completes)
  *    POST /api/uploads/{photoId}/complete
  * 
- * 2. INFRASTRUCTURE/WEB LAYER
+ * 2. WEB/API LAYER
  *    UploadController.reportUploadCompletion()
  *    - Parses photoId from path
  *    - Finds Photo by ID
@@ -164,9 +164,10 @@ package com.rapidphotoupload.application.commands.upload;
  *    - Proper error handling with onErrorResume/onErrorReturn
  * 
  * 4. VERTICAL SLICE ARCHITECTURE
- *    - All layers for upload feature in one slice
+ *    - All layers for upload feature in one slice (slices/upload/)
  *    - Self-contained and independently testable
  *    - No horizontal layer organization
+ *    - Each slice contains: Controller, Commands, Queries, DTOs
  * 
  * 5. DOMAIN-DRIVEN DESIGN
  *    - Rich domain models (Photo, UploadJob)

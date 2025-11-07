@@ -1,10 +1,9 @@
-package com.rapidphotoupload.application.commands.upload;
+package com.rapidphotoupload.slices.upload;
 
 import com.rapidphotoupload.domain.photo.Photo;
 import com.rapidphotoupload.domain.photo.PhotoId;
 import com.rapidphotoupload.domain.photo.PhotoRepository;
 import com.rapidphotoupload.infrastructure.storage.StorageAdapter;
-import com.rapidphotoupload.infrastructure.web.dto.UploadResponseDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
