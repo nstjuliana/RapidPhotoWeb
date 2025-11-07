@@ -1,6 +1,7 @@
 package com.rapidphotoupload.infrastructure.web.exceptions;
 
 import com.rapidphotoupload.infrastructure.web.dto.ErrorResponseDto;
+import com.rapidphotoupload.shared.exceptions.AuthenticationException;
 import com.rapidphotoupload.shared.exceptions.DomainException;
 import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import com.rapidphotoupload.shared.exceptions.StorageException;
@@ -25,6 +26,7 @@ import reactor.core.publisher.Mono;
  * 
  * Exception mapping:
  * - EntityNotFoundException → 404 Not Found
+ * - AuthenticationException → 401 Unauthorized
  * - ValidationException → 400 Bad Request
  * - StorageException → 503 Service Unavailable
  * - DomainException → 400 Bad Request
@@ -50,6 +52,18 @@ public class GlobalExceptionHandler {
                 exchange.getRequest().getPath().value()
         );
         return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse));
+    }
+    
+    @ExceptionHandler(AuthenticationException.class)
+    public Mono<ResponseEntity<ErrorResponseDto>> handleAuthenticationException(
+            AuthenticationException ex, ServerWebExchange exchange) {
+        logger.warn("Authentication error: {}", ex.getMessage());
+        ErrorResponseDto errorResponse = new ErrorResponseDto(
+                "Authentication Error",
+                ex.getMessage(),
+                exchange.getRequest().getPath().value()
+        );
+        return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse));
     }
     
     @ExceptionHandler(ValidationException.class)
