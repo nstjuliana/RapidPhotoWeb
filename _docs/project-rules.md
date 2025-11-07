@@ -50,12 +50,11 @@ backend/
 │   │   │       └── rapidphotoupload/
 │   │   │           ├── RapidPhotoUploadApplication.java
 │   │   │           │
-│   │   │           ├── domain/                    # Domain layer (DDD)
+│   │   │           ├── domain/                    # Domain layer (DDD) - Shared
 │   │   │           │   ├── photo/
 │   │   │           │   │   ├── Photo.java         # Domain entity
 │   │   │           │   │   ├── PhotoId.java       # Value object
-│   │   │           │   │   ├── PhotoRepository.java # Domain repository interface
-│   │   │           │   │   └── PhotoService.java  # Domain service
+│   │   │           │   │   └── PhotoRepository.java # Domain repository interface
 │   │   │           │   ├── uploadjob/
 │   │   │           │   │   ├── UploadJob.java
 │   │   │           │   │   ├── UploadJobId.java
@@ -66,32 +65,46 @@ backend/
 │   │   │           │       ├── UserId.java
 │   │   │           │       └── UserRepository.java
 │   │   │           │
-│   │   │           ├── application/               # Application layer (CQRS)
-│   │   │           │   ├── commands/             # Command handlers (mutations)
-│   │   │           │   │   ├── upload/
-│   │   │           │   │   │   ├── UploadPhotoCommand.java
-│   │   │           │   │   │   ├── UploadPhotoCommandHandler.java
-│   │   │           │   │   │   └── UploadPhotoSlice.java # VSA: Complete feature slice
-│   │   │           │   │   ├── tag/
-│   │   │           │   │   │   ├── TagPhotoCommand.java
-│   │   │           │   │   │   ├── TagPhotoCommandHandler.java
-│   │   │           │   │   │   └── TagPhotoSlice.java
-│   │   │           │   │   └── auth/
-│   │   │           │   │       ├── LoginCommand.java
-│   │   │           │   │       ├── LoginCommandHandler.java
-│   │   │           │   │       └── LoginSlice.java
+│   │   │           ├── slices/                    # Vertical Slice Architecture (VSA)
+│   │   │           │   ├── upload/                # Upload photo feature slice
+│   │   │           │   │   ├── UploadController.java # REST controller
+│   │   │           │   │   ├── UploadPhotoCommand.java # Command object
+│   │   │           │   │   ├── UploadPhotoCommandHandler.java # Command handler
+│   │   │           │   │   ├── GetUploadStatusQuery.java # Query object
+│   │   │           │   │   ├── GetUploadStatusQueryHandler.java # Query handler
+│   │   │           │   │   ├── UploadRequestDto.java # Request DTO
+│   │   │           │   │   ├── UploadResponseDto.java # Response DTO
+│   │   │           │   │   ├── UploadStatusDto.java # Status DTO
+│   │   │           │   │   ├── UploadFailureDto.java # Failure DTO
+│   │   │           │   │   └── UploadPhotoSlice.java # Slice documentation
 │   │   │           │   │
-│   │   │           │   └── queries/               # Query handlers (reads)
-│   │   │           │       ├── photo/
-│   │   │           │       │   ├── GetPhotoQuery.java
-│   │   │           │       │   ├── GetPhotoQueryHandler.java
-│   │   │           │       │   ├── ListPhotosQuery.java
-│   │   │           │       │   ├── ListPhotosQueryHandler.java
-│   │   │           │       │   └── GetPhotoMetadataSlice.java
-│   │   │           │       └── auth/
-│   │   │           │           └── ValidateTokenQuery.java
+│   │   │           │   ├── photo/                 # Photo gallery feature slice
+│   │   │           │   │   ├── PhotoController.java
+│   │   │           │   │   ├── GetPhotoQuery.java
+│   │   │           │   │   ├── GetPhotoQueryHandler.java
+│   │   │           │   │   ├── ListPhotosQuery.java
+│   │   │           │   │   ├── ListPhotosQueryHandler.java
+│   │   │           │   │   ├── PhotoDto.java
+│   │   │           │   │   └── PhotoSlice.java
+│   │   │           │   │
+│   │   │           │   ├── auth/                  # Authentication feature slice
+│   │   │           │   │   ├── AuthController.java
+│   │   │           │   │   ├── LoginCommand.java
+│   │   │           │   │   ├── LoginCommandHandler.java
+│   │   │           │   │   ├── ValidateTokenQuery.java
+│   │   │           │   │   ├── ValidateTokenQueryHandler.java
+│   │   │           │   │   ├── LoginRequestDto.java
+│   │   │           │   │   ├── LoginResponseDto.java
+│   │   │           │   │   └── AuthSlice.java
+│   │   │           │   │
+│   │   │           │   └── tag/                   # Tag photo feature slice
+│   │   │           │       ├── TagController.java
+│   │   │           │       ├── TagPhotoCommand.java
+│   │   │           │       ├── TagPhotoCommandHandler.java
+│   │   │           │       ├── TagRequestDto.java
+│   │   │           │       └── TagPhotoSlice.java
 │   │   │           │
-│   │   │           ├── infrastructure/            # Infrastructure layer
+│   │   │           ├── infrastructure/            # Infrastructure layer - Shared
 │   │   │           │   ├── persistence/           # Database implementation
 │   │   │           │   │   ├── jpa/
 │   │   │           │   │   │   ├── PhotoJpaRepository.java
@@ -115,22 +128,15 @@ backend/
 │   │   │           │   │   └── config/
 │   │   │           │   │       └── SecurityConfig.java
 │   │   │           │   │
-│   │   │           │   └── web/                   # Web/API layer
-│   │   │           │       ├── controllers/       # REST controllers
-│   │   │           │       │   ├── PhotoController.java
-│   │   │           │       │   ├── UploadController.java
-│   │   │           │       │   ├── AuthController.java
-│   │   │           │       │   └── TagController.java
+│   │   │           │   └── web/                   # Web/API layer - Shared infrastructure
+│   │   │           │       ├── controllers/       # Shared controllers (e.g., health, home)
+│   │   │           │       │   └── HomeController.java
 │   │   │           │       │
-│   │   │           │       ├── dto/                # Data Transfer Objects
-│   │   │           │       │   ├── PhotoDto.java
-│   │   │           │       │   ├── UploadRequestDto.java
-│   │   │           │       │   ├── UploadResponseDto.java
+│   │   │           │       ├── dto/                # Shared DTOs
 │   │   │           │       │   └── ErrorResponseDto.java
 │   │   │           │       │
 │   │   │           │       └── exceptions/         # Exception handlers
-│   │   │           │           ├── GlobalExceptionHandler.java
-│   │   │           │           └── ApiException.java
+│   │   │           │           └── GlobalExceptionHandler.java
 │   │   │           │
 │   │   │           └── shared/                    # Shared utilities
 │   │   │               ├── exceptions/
@@ -157,10 +163,9 @@ backend/
 │       │           │   ├── domain/
 │       │           │   │   └── photo/
 │       │           │   │       └── PhotoTest.java
-│       │           │   └── application/
-│       │           │       └── commands/
-│       │           │           └── upload/
-│       │           │               └── UploadPhotoCommandHandlerTest.java
+│       │           │   └── slices/
+│       │           │       └── upload/
+│       │           │           └── UploadPhotoCommandHandlerTest.java
 │       │           │
 │       │           └── fixtures/                  # Test fixtures
 │       │               └── PhotoFixtures.java
@@ -185,12 +190,39 @@ backend/
 
 ### Backend Code Organization Rules
 
-1. **Vertical Slice Architecture (VSA):** Each feature slice contains all layers (domain, application, infrastructure) for that feature
-2. **CQRS Separation:** Commands and queries are in separate packages
-3. **Domain Layer:** Contains only business logic, no infrastructure dependencies
-4. **Application Layer:** Orchestrates domain objects and infrastructure
-5. **Infrastructure Layer:** Implements interfaces defined in domain/application layers
-6. **File Size Limit:** No file should exceed 500 lines; split into smaller classes if needed
+1. **Vertical Slice Architecture (VSA):** 
+   - Each feature is organized as a self-contained slice in `slices/{feature}/`
+   - Each slice contains: Controller, Commands, Command Handlers, Queries, Query Handlers, DTOs, and documentation
+   - All application layer code for a feature lives together in one slice directory
+   - No horizontal organization by layer (no separate `application/commands/` or `application/queries/` directories)
+   - Domain and infrastructure remain shared across slices (as they should be in DDD)
+
+2. **CQRS Separation:** 
+   - Commands (mutations) and queries (reads) are clearly separated within each slice
+   - Command handlers handle write operations
+   - Query handlers handle read operations
+   - Both coexist in the same slice directory
+
+3. **Domain Layer:** 
+   - Contains only business logic, no infrastructure dependencies
+   - Shared across all slices
+   - Defines repository interfaces (implementations in infrastructure)
+
+4. **Application Layer:** 
+   - Lives within feature slices (`slices/{feature}/`)
+   - Orchestrates domain objects and infrastructure
+   - Contains command/query handlers specific to each feature
+
+5. **Infrastructure Layer:** 
+   - Implements interfaces defined in domain layer
+   - Shared across all slices
+   - Contains persistence, storage, security, and web infrastructure
+
+6. **Slice Documentation:** 
+   - Each slice should have a `{Feature}Slice.java` class that documents the complete flow
+   - This class serves as architectural documentation (no implementation code)
+
+7. **File Size Limit:** No file should exceed 500 lines; split into smaller classes if needed
 
 ---
 
@@ -754,15 +786,19 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 - **Value Objects:** Use value objects for IDs and other domain concepts
 
 #### CQRS (Command Query Responsibility Segregation)
-- **Commands:** Handle mutations (create, update, delete) in `application/commands/`
-- **Queries:** Handle reads in `application/queries/`
+- **Commands:** Handle mutations (create, update, delete) within feature slices (`slices/{feature}/`)
+- **Queries:** Handle reads within feature slices (`slices/{feature}/`)
+- **Co-location:** Commands and queries for a feature live together in the same slice directory
 - **Separate Models:** Commands and queries can have different data models
 - **Optimized Reads:** Queries can bypass domain layer for performance
 
 #### Vertical Slice Architecture (VSA)
-- **Feature Slices:** Each feature (e.g., `UploadPhotoSlice`) contains all layers
-- **Self-Contained:** Each slice is independent and can be developed/tested separately
-- **No Horizontal Layers:** Avoid organizing by technical layers across features
+- **Feature Slices:** Each feature is organized in `slices/{feature}/` directory
+- **Self-Contained:** Each slice contains Controller, Commands, Queries, DTOs, and documentation
+- **Co-location:** All application layer code for a feature lives together in one slice
+- **Shared Layers:** Domain and infrastructure remain shared across slices (as per DDD principles)
+- **No Horizontal Layers:** Avoid organizing by technical layers (no `application/commands/` or `application/queries/` directories)
+- **Slice Documentation:** Each slice includes a `{Feature}Slice.java` class documenting the complete flow
 
 ### Frontend Architecture
 

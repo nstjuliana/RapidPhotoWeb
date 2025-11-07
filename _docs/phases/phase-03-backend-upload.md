@@ -28,10 +28,10 @@ Implement the complete photo upload flow using CQRS command pattern. This phase 
 **Goal:** Define the upload command structure and data transfer objects for the upload API.
 
 **Steps:**
-1. Create `UploadPhotoCommand` in `application/commands/upload/UploadPhotoCommand.java`:
+1. Create `UploadPhotoCommand` in `slices/upload/UploadPhotoCommand.java`:
    - Fields: userId (UserId), filename (String), contentType (String), fileSize (Long), tags (Set<String>)
    - Validation logic for filename, file size limits, content type
-2. Create `UploadRequestDto` in `infrastructure/web/dto/UploadRequestDto.java`:
+2. Create `UploadRequestDto` in `slices/upload/UploadRequestDto.java`:
    - Fields: filename, contentType, fileSize, tags (optional)
    - JSON serialization annotations
    - Validation annotations (@NotNull, @Size, etc.)
@@ -74,7 +74,7 @@ Implement the complete photo upload flow using CQRS command pattern. This phase 
 **Goal:** Implement CQRS command handler that orchestrates the upload flow.
 
 **Steps:**
-1. Create `UploadPhotoCommandHandler` in `application/commands/upload/UploadPhotoCommandHandler.java`:
+1. Create `UploadPhotoCommandHandler` in `slices/upload/UploadPhotoCommandHandler.java`:
    - Implements command handler pattern
    - Dependencies: PhotoRepository, UploadJobRepository, StorageAdapter
    - Returns Mono<UploadResponseDto>
@@ -128,7 +128,7 @@ Implement the complete photo upload flow using CQRS command pattern. This phase 
 **Goal:** Create REST controllers for upload initiation and status tracking.
 
 **Steps:**
-1. Create `UploadController` in `infrastructure/web/controllers/UploadController.java`:
+1. Create `UploadController` in `slices/upload/UploadController.java`:
    - `POST /api/uploads` - Initiate upload (returns presigned URL)
    - `GET /api/uploads/{photoId}/status` - Get upload status
    - `POST /api/uploads/{photoId}/complete` - Report upload completion

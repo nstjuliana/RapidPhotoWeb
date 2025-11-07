@@ -149,20 +149,21 @@ Implement the core domain layer following Domain-Driven Design (DDD) principles,
 **Goal:** Organize codebase following Vertical Slice Architecture (VSA) and CQRS patterns.
 
 **Steps:**
-1. Create directory structure for application layer:
-   - `application/commands/` for command handlers
-   - `application/queries/` for query handlers
+1. Create `slices/` directory for feature-based organization:
+   - Each feature will have its own slice directory: `slices/{feature}/`
+   - Each slice contains: Controller, Commands, Queries, DTOs, and documentation
 2. Create placeholder directories for future slices:
-   - `application/commands/upload/`
-   - `application/queries/photo/`
-   - `application/commands/tag/`
+   - `slices/upload/` (will contain upload controller, commands, queries, DTOs)
+   - `slices/photo/` (will contain photo controller, queries, DTOs)
+   - `slices/tag/` (will contain tag controller, commands, DTOs)
+   - `slices/auth/` (will contain auth controller, commands, queries, DTOs)
 3. Create `shared/` directory for shared utilities and exceptions
-4. Ensure clear separation: domain → application → infrastructure
+4. Ensure clear separation: domain → application (in slices) → infrastructure
 5. Document architecture in code comments and README
 
 **Success Criteria:**
-- Directory structure follows VSA and CQRS patterns
-- Clear separation between domain, application, and infrastructure layers
+- Directory structure follows VSA pattern (slices organized by feature)
+- Clear separation between domain, application (in slices), and infrastructure layers
 - Code organization supports feature-based development
 - Architecture documented and understandable
 

@@ -27,16 +27,16 @@ Implement query handlers for retrieving photos (list, detail, filter), tag manag
 **Goal:** Implement query handler to retrieve list of photos for a user.
 
 **Steps:**
-1. Create `ListPhotosQuery` in `application/queries/photo/ListPhotosQuery.java`:
+1. Create `ListPhotosQuery` in `slices/photo/ListPhotosQuery.java`:
    - Fields: userId (UserId), page (int), size (int), sortBy (String)
    - Pagination support
-2. Create `ListPhotosQueryHandler`:
+2. Create `ListPhotosQueryHandler` in `slices/photo/ListPhotosQueryHandler.java`:
    - Dependencies: PhotoRepository
    - Returns Flux<PhotoDto> (reactive stream)
    - Implements pagination using repository
    - Converts Photo domain objects to PhotoDto
-3. Create `PhotoDto` with: id, filename, s3Key, uploadDate, tags, status, downloadUrl (presigned)
-4. Create REST endpoint `GET /api/photos`:
+3. Create `PhotoDto` in `slices/photo/PhotoDto.java` with: id, filename, s3Key, uploadDate, tags, status, downloadUrl (presigned)
+4. Create `PhotoController` in `slices/photo/PhotoController.java` with REST endpoint `GET /api/photos`:
    - Accepts query parameters: page, size, sortBy
    - Returns paginated list of photos
    - Uses reactive types (Mono<Page<PhotoDto>>)
@@ -54,14 +54,14 @@ Implement query handlers for retrieving photos (list, detail, filter), tag manag
 **Goal:** Implement query to retrieve single photo by ID with full metadata.
 
 **Steps:**
-1. Create `GetPhotoQuery` with photoId parameter
-2. Create `GetPhotoQueryHandler`:
+1. Create `GetPhotoQuery` in `slices/photo/GetPhotoQuery.java` with photoId parameter
+2. Create `GetPhotoQueryHandler` in `slices/photo/GetPhotoQueryHandler.java`:
    - Finds photo by ID using PhotoRepository
    - Returns Mono<PhotoDto>
    - Handles photo not found (returns Mono.empty() or error)
-3. Create `PhotoDetailDto` extending PhotoDto with additional fields:
+3. Create `PhotoDetailDto` in `slices/photo/PhotoDetailDto.java` extending PhotoDto with additional fields:
    - fileSize, contentType, uploadJobId (if applicable)
-4. Create REST endpoint `GET /api/photos/{photoId}`:
+4. Add REST endpoint `GET /api/photos/{photoId}` to `PhotoController`:
    - Returns single photo with full details
    - Returns 404 if photo not found
    - Includes presigned download URL
@@ -100,9 +100,9 @@ Implement query handlers for retrieving photos (list, detail, filter), tag manag
 **Goal:** Implement commands to add and remove tags from photos.
 
 **Steps:**
-1. Create `TagPhotoCommand`:
+1. Create `TagPhotoCommand` in `slices/tag/TagPhotoCommand.java`:
    - Fields: photoId, tags (Set<String>), operation (ADD or REMOVE)
-2. Create `TagPhotoCommandHandler`:
+2. Create `TagPhotoCommandHandler` in `slices/tag/TagPhotoCommandHandler.java`:
    - Loads photo by ID
    - Calls domain method `addTag()` or `removeTag()`
    - Saves updated photo
@@ -159,11 +159,11 @@ Implement query handlers for retrieving photos (list, detail, filter), tag manag
    - `authenticate(email, password)` returns mock token
    - `validateToken(token)` returns userId
    - Tokens are simple UUIDs or JWT-like strings (not real JWT)
-2. Create `LoginCommand` and `LoginCommandHandler`:
+2. Create `LoginCommand` in `slices/auth/LoginCommand.java` and `LoginCommandHandler` in `slices/auth/LoginCommandHandler.java`:
    - Accepts email/password
    - Validates credentials (mock validation for now)
    - Returns token and user info
-3. Create `AuthController`:
+3. Create `AuthController` in `slices/auth/AuthController.java`:
    - `POST /api/auth/login` - Returns mock token
    - `POST /api/auth/validate` - Validates token, returns userId
    - `POST /api/auth/logout` - No-op for now
