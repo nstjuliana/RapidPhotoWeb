@@ -141,6 +141,80 @@ This project follows an **AI-first codebase** approach with strict conventions f
 - **AWS Account** with S3 access
 - **Git**
 
+### Environment Variables
+
+#### Backend Environment Variables
+
+Create a `.env` file in the `backend/` directory or set these environment variables:
+
+```bash
+# Database Configuration
+DB_URL=jdbc:postgresql://localhost:5432/rapid_photo_upload
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+
+# AWS S3 Configuration
+AWS_S3_BUCKET_NAME=rapid-photo-upload-dev
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
+```
+
+#### Web Frontend Environment Variables
+
+Create a `.env.local` file in the `web/` directory:
+
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+### Database Setup
+
+1. **Install PostgreSQL** (if not already installed)
+   - Local: Install PostgreSQL 12+ on your machine
+   - Cloud: Set up AWS RDS PostgreSQL instance
+
+2. **Create Database**
+   ```sql
+   CREATE DATABASE rapid_photo_upload;
+   ```
+
+3. **Verify Connection**
+   - Update `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` in your environment variables
+   - The backend health check endpoint will verify connectivity
+
+### AWS S3 Bucket Setup
+
+1. **Create S3 Bucket**
+   - Log in to AWS Console
+   - Navigate to S3 service
+   - Create bucket with name: `rapid-photo-upload-[environment]` (e.g., `rapid-photo-upload-dev`)
+
+2. **Configure Bucket Settings**
+   - **Versioning:** Enable (optional but recommended)
+   - **Server-side encryption:** Enable (SSE-S3)
+   - **Block public access:** Enable (keep bucket private)
+
+3. **Configure CORS Policy**
+   - Go to bucket → Permissions → CORS configuration
+   - Add the following CORS configuration:
+   ```json
+   [
+     {
+       "AllowedHeaders": ["Content-Type", "Authorization"],
+       "AllowedMethods": ["PUT", "POST", "GET"],
+       "AllowedOrigins": ["http://localhost:3000"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3000
+     }
+   ]
+   ```
+
+4. **Create IAM User/Role**
+   - Create IAM user with S3 read/write permissions
+   - Generate access key and secret key
+   - Add credentials to backend environment variables
+
 ### Quick Start
 
 1. **Clone the repository**
@@ -152,26 +226,47 @@ This project follows an **AI-first codebase** approach with strict conventions f
 2. **Backend Setup**
    ```bash
    cd backend
-   # Configure application.yml with database and AWS credentials
+   # Set environment variables (see above)
    mvn clean install
    mvn spring-boot:run
    ```
+   - Backend will start on `http://localhost:8080`
+   - Health check available at `http://localhost:8080/actuator/health`
 
 3. **Web Frontend Setup**
    ```bash
    cd web
    npm install
-   # Configure NEXT_PUBLIC_API_URL in .env.local
+   # Create .env.local with NEXT_PUBLIC_API_URL=http://localhost:8080
    npm run dev
    ```
+   - Web app will start on `http://localhost:3000`
 
-4. **Mobile Setup**
+4. **Mobile Setup** (Future Phase)
    ```bash
    cd mobile
    npm install
    # Configure API URL in environment variables
    npx expo start
    ```
+
+### Health Check Endpoints
+
+The backend provides health check endpoints via Spring Boot Actuator:
+
+- **Basic Health:** `GET http://localhost:8080/actuator/health`
+  - Returns overall system status (UP/DOWN)
+  - Shows component status (database, S3)
+
+- **Health Details:** `GET http://localhost:8080/actuator/health`
+  - Component-level health information
+  - Database connectivity status
+  - S3 connectivity status
+
+- **Application Info:** `GET http://localhost:8080/actuator/info`
+  - Application metadata and version information
+
+**Note:** Health checks will show DOWN status for database and S3 until credentials are properly configured (expected in Phase 1).
 
 ## Documentation
 
@@ -196,6 +291,47 @@ Comprehensive documentation is available in the `_docs/` directory:
 - **S3 Security:** Presigned URLs with expiration and restricted permissions
 - **CORS:** Configured for web client access
 - **Input Validation:** All API endpoints validate input
+
+## Git Workflow
+
+### Branch Naming Conventions
+- `main` or `master` - Primary development branch
+- `feature/description` - New features (e.g., `feature/photo-upload`)
+- `bugfix/description` - Bug fixes (e.g., `bugfix/health-check`)
+- `hotfix/description` - Critical production fixes
+
+### Commit Message Format
+Follow conventional commit format:
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
+
+**Examples:**
+```
+feat(backend): add database health indicator
+fix(web): resolve layout rendering issue
+docs(readme): update setup instructions
+```
+
+### Development Workflow
+1. Create feature branch from `main`
+2. Make changes following project conventions
+3. Commit with descriptive messages
+4. Push branch and create pull request
+5. Review and merge to `main`
 
 ## Contributing
 
