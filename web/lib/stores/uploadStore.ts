@@ -111,11 +111,19 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
 
   updateUploadProgress: (id, progress, status) =>
     set((state) => ({
-      uploadQueue: state.uploadQueue.map((upload) =>
-        upload.id === id
-          ? { ...upload, progress, status: status || upload.status }
-          : upload
-      ),
+      uploadQueue: state.uploadQueue.map((upload) => {
+        if (upload.id === id) {
+          // Ensure progress only increases (never decreases)
+          // This prevents glitchy behavior from out-of-order updates
+          const newProgress = Math.max(upload.progress, Math.min(100, Math.max(0, progress)));
+          return {
+            ...upload,
+            progress: newProgress,
+            status: status || upload.status,
+          };
+        }
+        return upload;
+      }),
     })),
 
   updateUploadStatus: (id, updates) =>

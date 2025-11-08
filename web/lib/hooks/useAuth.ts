@@ -5,48 +5,69 @@
  * - login(email, password) - Authenticate user and store token
  * - signup(email, password) - Create new user and store token
  * - logout() - Clear token and redirect to login
- * - isAuthenticated() - Check if user is authenticated
+ * - isAuthenticated() - Check if user is authenticated (token exists and not expired)
  * - getToken() - Get current authentication token
  * 
  * Uses TanStack Query mutations for login/signup operations.
- * Stores token in localStorage with key 'auth_token'.
+ * Stores access and refresh tokens in localStorage with expiration tracking.
  */
 
 'use client';
 
+import { useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { login as loginApi, signup as signupApi, logout as logoutApi } from '@/lib/api/endpoints';
 import type { LoginResponse } from '@/lib/api/types';
-
-const AUTH_TOKEN_KEY = 'auth_token';
-const USER_ID_KEY = 'user_id';
+import { STORAGE_KEYS } from '@/lib/utils/constants';
+import { refreshAccessToken } from '@/lib/utils/tokenRefresh';
+import { isTokenExpired, isValidTokenFormat } from '@/lib/utils/token';
 
 /**
- * Get authentication token from localStorage.
+ * Get access token from localStorage.
  */
-function getToken(): string | null {
+function getAccessToken(): string | null {
   if (typeof window === 'undefined') {
     return null;
   }
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
 }
 
 /**
- * Set authentication token in localStorage.
+ * Get refresh token from localStorage.
  */
-function setToken(token: string): void {
+function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+}
+
+/**
+ * Set access and refresh tokens in localStorage with expiration tracking.
+ */
+function setTokens(accessToken: string, refreshToken: string, expiresIn?: number): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    
+    // Store expiration timestamp if provided
+    if (expiresIn) {
+      const expirationTimestamp = Date.now() + (expiresIn * 1000);
+      localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRATION, expirationTimestamp.toString());
+    }
   }
 }
 
 /**
- * Remove authentication token from localStorage.
+ * Remove authentication tokens from localStorage.
  */
-function removeToken(): void {
+function removeTokens(): void {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRATION);
+    localStorage.removeItem(STORAGE_KEYS.USER_ID);
   }
 }
 
@@ -55,7 +76,7 @@ function removeToken(): void {
  */
 function setUserId(userId: string): void {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(USER_ID_KEY, userId);
+    localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
   }
 }
 
@@ -64,7 +85,35 @@ function setUserId(userId: string): void {
  */
 function removeUserId(): void {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(USER_ID_KEY);
+    localStorage.removeItem(STORAGE_KEYS.USER_ID);
+  }
+}
+
+/**
+ * Get intended destination from localStorage.
+ */
+function getIntendedDestination(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return localStorage.getItem(STORAGE_KEYS.INTENDED_DESTINATION);
+}
+
+/**
+ * Set intended destination in localStorage.
+ */
+function setIntendedDestination(path: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.INTENDED_DESTINATION, path);
+  }
+}
+
+/**
+ * Clear intended destination from localStorage.
+ */
+function clearIntendedDestination(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEYS.INTENDED_DESTINATION);
   }
 }
 
@@ -75,6 +124,47 @@ export function useAuth() {
   const router = useRouter();
 
   /**
+   * Check token expiration and attempt refresh if needed.
+   */
+  useEffect(() => {
+    const checkAndRefreshToken = async () => {
+      const token = getAccessToken();
+      
+      // If no token, nothing to check
+      if (!token) {
+        return;
+      }
+
+      // If token is invalid format, clear it
+      if (!isValidTokenFormat(token)) {
+        removeTokens();
+        return;
+      }
+
+      // If token is expired, try to refresh
+      if (isTokenExpired(token)) {
+        const refreshTokenValue = getRefreshToken();
+        
+        if (refreshTokenValue && isValidTokenFormat(refreshTokenValue)) {
+          // Attempt refresh
+          const newToken = await refreshAccessToken();
+          
+          if (!newToken) {
+            // Refresh failed - clear tokens and redirect to login
+            removeTokens();
+            router.push('/login');
+          }
+        } else {
+          // No valid refresh token - clear tokens
+          removeTokens();
+        }
+      }
+    };
+
+    checkAndRefreshToken();
+  }, [router]);
+
+  /**
    * Login mutation.
    */
   const loginMutation = useMutation({
@@ -82,9 +172,17 @@ export function useAuth() {
       return await loginApi(email, password);
     },
     onSuccess: (data: LoginResponse) => {
-      setToken(data.token);
+      setTokens(data.accessToken, data.refreshToken, data.expiresIn);
       setUserId(data.userId);
-      router.push('/gallery');
+      
+      // Check for intended destination
+      const intendedDestination = getIntendedDestination();
+      if (intendedDestination) {
+        clearIntendedDestination();
+        router.push(intendedDestination);
+      } else {
+        router.push('/gallery');
+      }
     },
   });
 
@@ -96,9 +194,17 @@ export function useAuth() {
       return await signupApi(email, password);
     },
     onSuccess: (data: LoginResponse) => {
-      setToken(data.token);
+      setTokens(data.accessToken, data.refreshToken, data.expiresIn);
       setUserId(data.userId);
-      router.push('/gallery');
+      
+      // Check for intended destination
+      const intendedDestination = getIntendedDestination();
+      if (intendedDestination) {
+        clearIntendedDestination();
+        router.push(intendedDestination);
+      } else {
+        router.push('/gallery');
+      }
     },
   });
 
@@ -124,39 +230,56 @@ export function useAuth() {
 
   /**
    * Logout function.
-   * Clears token and redirects to login page.
+   * Clears tokens and redirects to login page.
    */
   const logout = async () => {
-    const token = getToken();
-    if (token) {
+    const accessToken = getAccessToken();
+    if (accessToken) {
       try {
-        await logoutApi(token);
+        await logoutApi(accessToken);
       } catch (error) {
-        // Ignore logout API errors, still clear token locally
-        console.error('Logout API error:', error);
+        // Ignore logout API errors, still clear tokens locally
+        // Don't log error to avoid exposing tokens
       }
     }
-    removeToken();
-    removeUserId();
+    removeTokens();
     router.push('/login');
   };
 
   /**
    * Check if user is authenticated.
    * 
-   * @returns true if token exists, false otherwise
+   * Checks if access token exists, is valid format, and not expired.
+   * 
+   * @returns true if user is authenticated, false otherwise
    */
   const isAuthenticated = (): boolean => {
-    return getToken() !== null;
+    const token = getAccessToken();
+    
+    if (!token) {
+      return false;
+    }
+
+    // Check token format
+    if (!isValidTokenFormat(token)) {
+      return false;
+    }
+
+    // Check token expiration
+    if (isTokenExpired(token)) {
+      return false;
+    }
+
+    return true;
   };
 
   /**
-   * Get current authentication token.
+   * Get current access token.
    * 
-   * @returns Token string or null if not authenticated
+   * @returns Access token string or null if not authenticated
    */
-  const getAuthToken = (): string | null => {
-    return getToken();
+  const getToken = (): string | null => {
+    return getAccessToken();
   };
 
   return {
@@ -164,9 +287,12 @@ export function useAuth() {
     signup,
     logout,
     isAuthenticated,
-    getToken: getAuthToken,
+    getToken,
     isLoading: loginMutation.isPending || signupMutation.isPending,
     error: loginMutation.error || signupMutation.error,
   };
 }
+
+// Export helper functions for use in other components
+export { setIntendedDestination };
 

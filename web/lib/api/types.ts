@@ -17,7 +17,9 @@ export interface LoginRequest {
  * Response DTO for login and signup endpoints.
  */
 export interface LoginResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number; // seconds until access token expires
   userId: string;
   email: string;
 }
@@ -43,6 +45,21 @@ export interface ValidateTokenRequest {
 export interface ValidateTokenResponse {
   valid: boolean;
   userId: string | null;
+}
+
+/**
+ * Request DTO for token refresh endpoint.
+ */
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+/**
+ * Response DTO for token refresh endpoint.
+ */
+export interface RefreshTokenResponse {
+  accessToken: string;
+  expiresIn: number; // seconds until access token expires
 }
 
 /**

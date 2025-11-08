@@ -3,14 +3,12 @@ package com.rapidphotoupload.slices.auth;
 import com.rapidphotoupload.domain.user.User;
 import com.rapidphotoupload.domain.user.UserId;
 import com.rapidphotoupload.domain.user.UserRepository;
-import com.rapidphotoupload.infrastructure.security.MockAuthService;
+import com.rapidphotoupload.infrastructure.security.jwt.JwtTokenProvider;
 import com.rapidphotoupload.shared.exceptions.ValidationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,13 +17,10 @@ import java.util.UUID;
  * 
  * This handler processes SignupCommand requests by:
  * 1. Checking if user with email already exists
- * 2. Creating new User domain entity with hashed password
+ * 2. Creating new User domain entity with BCrypt-hashed password
  * 3. Saving user to repository
- * 4. Generating authentication token
- * 5. Returning token and user info
- * 
- * Note: Password hashing uses simple SHA-256 for Phase 4 mock auth.
- * This will be replaced with proper password hashing (BCrypt) in Phase 8.
+ * 4. Generating JWT access and refresh tokens
+ * 5. Returning tokens and user info
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -34,20 +29,23 @@ import java.util.UUID;
 public class SignupCommandHandler {
     
     private final UserRepository userRepository;
-    private final MockAuthService mockAuthService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
     
     public SignupCommandHandler(
             UserRepository userRepository,
-            MockAuthService mockAuthService) {
+            PasswordEncoder passwordEncoder,
+            JwtTokenProvider jwtTokenProvider) {
         this.userRepository = userRepository;
-        this.mockAuthService = mockAuthService;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
     
     /**
      * Handles the signup command.
      * 
      * @param command The command containing email and password
-     * @return Mono containing LoginResponseDto with token and user info
+     * @return Mono containing LoginResponseDto with tokens and user info
      */
     public Mono<LoginResponseDto> handle(SignupCommand command) {
         // Validate command inputs
@@ -67,8 +65,8 @@ public class SignupCommandHandler {
                     // User doesn't exist, create new one
                     Mono.defer(() -> {
                         try {
-                            // Hash password
-                            String passwordHash = hashPassword(command.getPassword());
+                            // Hash password using BCrypt
+                            String passwordHash = passwordEncoder.encode(command.getPassword());
                             
                             // Create new user
                             UserId userId = UserId.of(UUID.randomUUID());
@@ -92,41 +90,20 @@ public class SignupCommandHandler {
                     })
                 )
                 .flatMap(user -> {
-                    // Generate token
-                    String token = mockAuthService.generateToken(user.getId());
+                    // Generate JWT tokens
+                    String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
+                    String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
                     
                     // Create response
                     LoginResponseDto response = new LoginResponseDto();
-                    response.setToken(token);
+                    response.setAccessToken(accessToken);
+                    response.setRefreshToken(refreshToken);
+                    response.setExpiresIn(900L); // 15 minutes in seconds
                     response.setUserId(user.getId().getValue().toString());
                     response.setEmail(user.getEmail());
                     
                     return Mono.just(response);
                 });
-    }
-    
-    /**
-     * Hashes a password using SHA-256 (simple hashing for Phase 4 mock auth).
-     * 
-     * @param password The plain text password
-     * @return The hashed password string
-     */
-    private String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("SHA-256 algorithm not available", e);
-        }
     }
 }
 

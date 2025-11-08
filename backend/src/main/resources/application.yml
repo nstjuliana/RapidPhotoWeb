@@ -74,6 +74,13 @@ logging:
     org.flywaydb: DEBUG
     org.flywaydb.core.internal.command: DEBUG
 
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:change-me-in-production-use-strong-random-secret-key-minimum-256-bits}
+  access-token-expiration-ms: 900000  # 15 minutes
+  refresh-token-expiration-ms: 604800000  # 7 days
+  issuer: rapid-photo-upload
+
 
 
 

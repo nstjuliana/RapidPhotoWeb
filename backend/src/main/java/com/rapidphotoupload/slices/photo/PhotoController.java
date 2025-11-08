@@ -2,7 +2,9 @@ package com.rapidphotoupload.slices.photo;
 
 import com.rapidphotoupload.domain.photo.PhotoId;
 import com.rapidphotoupload.domain.user.UserId;
+import com.rapidphotoupload.infrastructure.security.SecurityUtils;
 import com.rapidphotoupload.infrastructure.storage.StorageAdapter;
+import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
  * - Getting presigned download URLs
  * 
  * All endpoints use reactive types (Mono/Flux) for non-blocking operations.
+ * All endpoints require JWT authentication and filter results by authenticated user.
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -48,16 +51,16 @@ public class PhotoController {
     }
     
     /**
-     * Lists photos for a user with pagination and optional tag filtering.
+     * Lists photos for the authenticated user with pagination and optional tag filtering.
+     * 
+     * User ID is extracted from JWT token in Authorization header.
      * 
      * Query parameters:
-     * - userId: Required user ID (UUID)
      * - page: Page number (0-indexed, default: 0)
      * - size: Page size (default: 20, max: 100)
      * - sortBy: Field to sort by (default: "uploadDate")
      * - tags: Comma-separated list of tags to filter by (AND logic)
      * 
-     * @param userId The user ID (required)
      * @param page Page number (optional, default: 0)
      * @param size Page size (optional, default: 20)
      * @param sortBy Sort field (optional, default: "uploadDate")
@@ -66,72 +69,93 @@ public class PhotoController {
      */
     @GetMapping
     public Flux<PhotoDto> listPhotos(
-            @RequestParam("userId") String userId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             @RequestParam(value = "sortBy", required = false) String sortBy,
             @RequestParam(value = "tags", required = false) String tags) {
         
         // Validate and normalize parameters
-        if (page < 0) {
-            page = 0;
-        }
-        if (size < 1) {
-            size = DEFAULT_PAGE_SIZE;
-        }
-        if (size > MAX_PAGE_SIZE) {
-            size = MAX_PAGE_SIZE;
-        }
+        final int normalizedPage = page < 0 ? 0 : page;
+        final int normalizedSize = size < 1 ? DEFAULT_PAGE_SIZE : (size > MAX_PAGE_SIZE ? MAX_PAGE_SIZE : size);
+        final String normalizedSortBy = sortBy;
         
         // Parse tags from comma-separated string
-        Set<String> tagSet = null;
+        final Set<String> normalizedTagSet;
         if (tags != null && !tags.isBlank()) {
-            tagSet = Arrays.stream(tags.split(","))
+            normalizedTagSet = Arrays.stream(tags.split(","))
                     .map(String::trim)
                     .filter(tag -> !tag.isBlank())
                     .collect(Collectors.toSet());
+        } else {
+            normalizedTagSet = null;
         }
         
-        // Create query
-        ListPhotosQuery query = new ListPhotosQuery(
-                UserId.of(userId),
-                page,
-                size,
-                sortBy,
-                tagSet
-        );
-        
-        return listPhotosQueryHandler.handle(query);
+        // Get userId from security context and create query
+        return SecurityUtils.getCurrentUserId()
+                .flatMapMany(userId -> {
+                    ListPhotosQuery query = new ListPhotosQuery(
+                            userId,
+                            normalizedPage,
+                            normalizedSize,
+                            normalizedSortBy,
+                            normalizedTagSet
+                    );
+                    
+                    return listPhotosQueryHandler.handle(query);
+                });
     }
     
     /**
      * Retrieves a single photo by ID.
      * 
+     * Only returns photo if it belongs to the authenticated user.
+     * 
      * @param photoId The photo ID (UUID)
-     * @return Mono containing PhotoDto, or 404 if not found
+     * @return Mono containing PhotoDto, or 404 if not found or not authorized
      */
     @GetMapping("/{photoId}")
     public Mono<ResponseEntity<PhotoDto>> getPhoto(@PathVariable String photoId) {
-        GetPhotoQuery query = new GetPhotoQuery(PhotoId.of(photoId));
+        PhotoId photoIdObj;
+        try {
+            photoIdObj = PhotoId.of(photoId);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
         
-        return getPhotoQueryHandler.handle(query)
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    GetPhotoQuery query = new GetPhotoQuery(photoIdObj, userId);
+                    return getPhotoQueryHandler.handle(query);
+                })
                 .map(ResponseEntity::ok)
-                .onErrorReturn(com.rapidphotoupload.shared.exceptions.EntityNotFoundException.class,
-                        ResponseEntity.notFound().build());
+                .onErrorReturn(EntityNotFoundException.class,
+                        ResponseEntity.notFound().build())
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
     
     /**
      * Generates a presigned download URL for a photo.
+     * 
+     * Only returns URL if photo belongs to the authenticated user.
      * 
      * @param photoId The photo ID (UUID)
      * @return Mono containing download URL response
      */
     @GetMapping("/{photoId}/download")
     public Mono<ResponseEntity<DownloadUrlResponse>> getDownloadUrl(@PathVariable String photoId) {
-        // First, verify photo exists by getting it
-        GetPhotoQuery query = new GetPhotoQuery(PhotoId.of(photoId));
+        PhotoId photoIdObj;
+        try {
+            photoIdObj = PhotoId.of(photoId);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
         
-        return getPhotoQueryHandler.handle(query)
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    GetPhotoQuery query = new GetPhotoQuery(photoIdObj, userId);
+                    return getPhotoQueryHandler.handle(query);
+                })
                 .flatMap(photoDto -> 
                     storageAdapter.generatePresignedDownloadUrl(
                             photoDto.getS3Key(),
@@ -144,8 +168,10 @@ public class PhotoController {
                         return ResponseEntity.ok(response);
                     })
                 )
-                .onErrorReturn(com.rapidphotoupload.shared.exceptions.EntityNotFoundException.class,
-                        ResponseEntity.notFound().build());
+                .onErrorReturn(EntityNotFoundException.class,
+                        ResponseEntity.notFound().build())
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
     
     /**

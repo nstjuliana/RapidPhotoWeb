@@ -4,6 +4,7 @@ import com.rapidphotoupload.domain.photo.Photo;
 import com.rapidphotoupload.domain.photo.PhotoId;
 import com.rapidphotoupload.domain.photo.PhotoRepository;
 import com.rapidphotoupload.domain.user.UserId;
+import com.rapidphotoupload.infrastructure.security.SecurityUtils;
 import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -23,7 +24,7 @@ import reactor.core.publisher.Mono;
  * - Reporting upload failure (POST /api/uploads/{photoId}/fail)
  * 
  * All endpoints use reactive types (Mono) for non-blocking operations.
- * Authentication is currently mocked using x-user-id header (Phase 4 will add JWT).
+ * All endpoints require JWT authentication.
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -33,11 +34,6 @@ import reactor.core.publisher.Mono;
 public class UploadController {
     
     private static final Logger logger = LoggerFactory.getLogger(UploadController.class);
-    
-    /**
-     * Header name for user ID (mocked authentication).
-     */
-    private static final String USER_ID_HEADER = "x-user-id";
     
     private final UploadPhotoCommandHandler uploadPhotoCommandHandler;
     private final GetUploadStatusQueryHandler getUploadStatusQueryHandler;
@@ -55,46 +51,35 @@ public class UploadController {
     /**
      * Initiates a photo upload by generating a presigned URL.
      * 
+     * User ID is extracted from JWT token in Authorization header.
+     * 
      * @param requestDto The upload request containing file metadata
-     * @param userIdHeader The user ID from header (mocked authentication)
      * @return Mono containing the upload response with presigned URL
      */
     @PostMapping
     public Mono<ResponseEntity<UploadResponseDto>> initiateUpload(
-            @Valid @RequestBody Mono<UploadRequestDto> requestDto,
-            @RequestHeader(value = USER_ID_HEADER, required = false) String userIdHeader) {
+            @Valid @RequestBody Mono<UploadRequestDto> requestDto) {
         
         logger.info("Received upload request");
         
-        // Extract userId from header (mock authentication)
-        if (userIdHeader == null || userIdHeader.isBlank()) {
-            return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
-        }
-        
-        UserId userId;
-        try {
-            userId = UserId.of(userIdHeader);
-        } catch (IllegalArgumentException e) {
-            logger.warn("Invalid user ID format: {}", userIdHeader);
-            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
-        }
-        
-        return requestDto
-                .flatMap(dto -> {
-                    // Convert DTO to command
-                    UploadPhotoCommand command = new UploadPhotoCommand(
-                            userId,
-                            dto.getFilename(),
-                            dto.getContentType(),
-                            dto.getFileSize(),
-                            dto.getTags()
-                    );
-                    
-                    // Handle command
-                    return uploadPhotoCommandHandler.handle(command);
-                })
-                .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
-                .doOnError(error -> logger.error("Error initiating upload", error));
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> requestDto
+                        .flatMap(dto -> {
+                            // Convert DTO to command
+                            UploadPhotoCommand command = new UploadPhotoCommand(
+                                    userId,
+                                    dto.getFilename(),
+                                    dto.getContentType(),
+                                    dto.getFileSize(),
+                                    dto.getTags()
+                            );
+                            
+                            // Handle command
+                            return uploadPhotoCommandHandler.handle(command);
+                        })
+                        .map(response -> ResponseEntity.status(HttpStatus.CREATED).body(response))
+                        .doOnError(error -> logger.error("Error initiating upload", error))
+                );
     }
     
     /**

@@ -18,17 +18,6 @@ import { uploadToS3 } from '@/lib/utils/s3Upload';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 /**
- * Get user ID from localStorage.
- * Currently stored when user logs in (from LoginResponse).
- */
-function getUserId(): string | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  return localStorage.getItem('user_id');
-}
-
-/**
  * Photo upload hook.
  * 
  * @returns Object with upload functions and state
@@ -57,15 +46,11 @@ export function usePhotoUpload() {
       throw new Error(`Upload not found: ${uploadId}`);
     }
 
-    const userId = getUserId();
-    if (!userId) {
-      throw new Error('User ID not found. Please log in again.');
-    }
-
     const { file } = upload;
 
     try {
       // Step 1: Request presigned URL from backend
+      // User ID is extracted from JWT token in Authorization header
       updateUploadStatus(uploadId, { status: 'pending' });
       
       const uploadRequest = {
@@ -75,7 +60,7 @@ export function usePhotoUpload() {
         tags: tags.length > 0 ? tags : undefined,
       };
 
-      const response = await requestPresignedUrl(uploadRequest, userId);
+      const response = await requestPresignedUrl(uploadRequest);
 
       // Step 2: Update store with presigned URL and photo ID
       updateUploadStatus(uploadId, {

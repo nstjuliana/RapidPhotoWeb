@@ -15,6 +15,8 @@ import type {
   SignupRequest,
   ValidateTokenRequest,
   ValidateTokenResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   UploadRequestDto,
   UploadResponseDto,
   UploadStatusDto,
@@ -90,24 +92,52 @@ export async function logout(token: string): Promise<void> {
 }
 
 /**
+ * Refresh token endpoint.
+ * 
+ * Note: This function uses fetch directly instead of apiClient to avoid
+ * triggering the token refresh interceptor, which could cause infinite loops.
+ * 
+ * @param refreshToken Refresh token string
+ * @returns Promise resolving to RefreshTokenResponse with new access token
+ */
+export async function refreshToken(
+  refreshToken: string
+): Promise<RefreshTokenResponse> {
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+  const request: RefreshTokenRequest = { refreshToken };
+  
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Refresh token expired or invalid');
+    }
+    throw new Error(`Token refresh failed: ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+/**
  * Request presigned URL for photo upload.
  * 
+ * User ID is extracted from JWT token in Authorization header.
+ * 
  * @param request Upload request containing file metadata
- * @param userId User ID for authentication (currently using x-user-id header)
  * @returns Promise resolving to UploadResponseDto with presigned URL
  */
 export async function requestPresignedUrl(
-  request: UploadRequestDto,
-  userId: string
+  request: UploadRequestDto
 ): Promise<UploadResponseDto> {
   const response = await apiClient.post<UploadResponseDto>(
     '/api/uploads',
-    request,
-    {
-      headers: {
-        'x-user-id': userId,
-      },
-    }
+    request
   );
   return response.data;
 }

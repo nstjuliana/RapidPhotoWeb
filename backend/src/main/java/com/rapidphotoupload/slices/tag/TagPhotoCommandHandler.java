@@ -5,6 +5,7 @@ import com.rapidphotoupload.domain.photo.PhotoId;
 import com.rapidphotoupload.domain.photo.PhotoRepository;
 import com.rapidphotoupload.infrastructure.storage.StorageAdapter;
 import com.rapidphotoupload.slices.photo.PhotoDto;
+import com.rapidphotoupload.shared.exceptions.AuthenticationException;
 import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -16,9 +17,10 @@ import java.util.Set;
  * 
  * This handler processes TagPhotoCommand requests by:
  * 1. Loading the photo by ID from repository
- * 2. Applying the tag operation (ADD, REMOVE, or REPLACE) using domain methods
- * 3. Saving the updated photo
- * 4. Converting to PhotoDto with new download URL
+ * 2. Verifying the photo belongs to the authenticated user
+ * 3. Applying the tag operation (ADD, REMOVE, or REPLACE) using domain methods
+ * 4. Saving the updated photo
+ * 5. Converting to PhotoDto with new download URL
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -41,7 +43,7 @@ public class TagPhotoCommandHandler {
     /**
      * Handles the tag photo command.
      * 
-     * @param command The command containing photoId, tags, and operation
+     * @param command The command containing photoId, userId, tags, and operation
      * @return Mono containing updated PhotoDto
      */
     public Mono<PhotoDto> handle(TagPhotoCommand command) {
@@ -51,6 +53,12 @@ public class TagPhotoCommandHandler {
                         command.getPhotoId().getValue().toString()
                 )))
                 .flatMap(photo -> {
+                    // Verify photo belongs to authenticated user
+                    if (!photo.getUserId().equals(command.getUserId())) {
+                        return Mono.error(new AuthenticationException(
+                                "Photo does not belong to authenticated user"));
+                    }
+                    
                     // Apply tag operation based on operation type
                     applyTagOperation(photo, command.getTags(), command.getOperation());
                     
@@ -113,4 +121,3 @@ public class TagPhotoCommandHandler {
                 });
     }
 }
-

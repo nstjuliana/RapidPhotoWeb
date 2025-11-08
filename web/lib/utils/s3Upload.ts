@@ -7,6 +7,39 @@
  */
 
 /**
+ * Throttle progress updates to prevent excessive re-renders.
+ * Only calls the callback if enough time has passed or progress increased significantly.
+ */
+function createThrottledProgressCallback(
+  callback: (progress: number) => void,
+  throttleMs: number = 100,
+  minIncrement: number = 1
+): (progress: number) => void {
+  let lastProgress = 0;
+  let lastUpdateTime = 0;
+
+  return (progress: number) => {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateTime;
+    const progressIncrement = progress - lastProgress;
+
+    // Update if:
+    // 1. Enough time has passed (throttle), OR
+    // 2. Progress increased by minimum increment, OR
+    // 3. Progress reached 100%
+    if (
+      timeSinceLastUpdate >= throttleMs ||
+      progressIncrement >= minIncrement ||
+      progress >= 100
+    ) {
+      lastProgress = progress;
+      lastUpdateTime = now;
+      callback(progress);
+    }
+  };
+}
+
+/**
  * Upload a file directly to S3 using a presigned URL with progress tracking.
  * 
  * @param file The file to upload
@@ -30,17 +63,39 @@ export async function uploadToS3(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
 
+    // Create throttled progress callback to prevent excessive updates
+    const throttledProgress = createThrottledProgressCallback(onProgress);
+
+    // Track last reported progress to ensure it only increases
+    let lastReportedProgress = 0;
+
     // Set up progress tracking
     xhr.upload.addEventListener('progress', (event) => {
       if (event.lengthComputable) {
-        const progress = Math.round((event.loaded / event.total) * 100);
-        onProgress(progress);
+        const rawProgress = (event.loaded / event.total) * 100;
+        // Round to nearest integer and ensure it only increases
+        const progress = Math.max(
+          lastReportedProgress,
+          Math.round(rawProgress)
+        );
+        // Clamp to 0-100
+        const clampedProgress = Math.min(100, Math.max(0, progress));
+        
+        // Only update if progress actually increased
+        if (clampedProgress > lastReportedProgress) {
+          lastReportedProgress = clampedProgress;
+          throttledProgress(clampedProgress);
+        }
       }
     });
 
     // Handle successful upload
     xhr.addEventListener('load', () => {
       if (xhr.status >= 200 && xhr.status < 300) {
+        // Ensure progress is set to 100% on completion
+        if (lastReportedProgress < 100) {
+          onProgress(100);
+        }
         resolve();
       } else if (xhr.status === 403) {
         // 403 often indicates CORS or permission issues

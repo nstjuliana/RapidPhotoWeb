@@ -17,8 +17,8 @@ import java.util.List;
  * 
  * CORS configuration:
  * - Allowed origins: http://localhost:3000 (web client)
- * - Allowed methods: GET, POST, PUT, DELETE, OPTIONS
- * - Allowed headers: Content-Type, Authorization, x-user-id
+ * - Allowed methods: GET, POST, PUT, DELETE, OPTIONS, PATCH
+ * - Allowed headers: Content-Type, Authorization, X-Requested-With
  * - Allow credentials: true
  * 
  * @author RapidPhotoUpload Team
@@ -48,7 +48,6 @@ public class WebConfig {
         corsConfig.setAllowedHeaders(Arrays.asList(
                 "Content-Type",
                 "Authorization",
-                "x-user-id",
                 "X-Requested-With"
         ));
         

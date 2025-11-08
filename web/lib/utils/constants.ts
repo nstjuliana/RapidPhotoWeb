@@ -11,7 +11,11 @@
  * Storage keys for localStorage.
  */
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'auth_token',
+  ACCESS_TOKEN: 'access_token',
+  REFRESH_TOKEN: 'refresh_token',
+  USER_ID: 'user_id',
+  TOKEN_EXPIRATION: 'token_expiration',
+  INTENDED_DESTINATION: 'intended_destination',
 } as const;
 
 /**
@@ -23,6 +27,7 @@ export const API_ENDPOINTS = {
     SIGNUP: '/api/auth/signup',
     VALIDATE: '/api/auth/validate',
     LOGOUT: '/api/auth/logout',
+    REFRESH: '/api/auth/refresh',
   },
 } as const;
 

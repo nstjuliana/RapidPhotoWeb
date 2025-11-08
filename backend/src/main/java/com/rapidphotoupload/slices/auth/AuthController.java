@@ -1,7 +1,6 @@
 package com.rapidphotoupload.slices.auth;
 
 import com.rapidphotoupload.domain.user.UserId;
-import com.rapidphotoupload.infrastructure.security.MockAuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,15 +10,13 @@ import reactor.core.publisher.Mono;
  * REST controller for authentication endpoints.
  * 
  * Provides endpoints for:
- * - User login (returns mock token)
- * - User signup (creates user, returns token)
- * - Token validation (validates token, returns userId)
- * - Logout (invalidates token)
+ * - User login (returns JWT access and refresh tokens)
+ * - User signup (creates user, returns JWT tokens)
+ * - Token refresh (generates new access token from refresh token)
+ * - Token validation (validates JWT token, returns userId)
+ * - Logout (client-side token deletion)
  * 
  * All endpoints use reactive types (Mono) for non-blocking operations.
- * 
- * Note: This is a mock authentication system for Phase 4 development.
- * It will be replaced with JWT-based authentication in Phase 8.
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -30,18 +27,18 @@ public class AuthController {
     
     private final LoginCommandHandler loginCommandHandler;
     private final SignupCommandHandler signupCommandHandler;
+    private final RefreshTokenCommandHandler refreshTokenCommandHandler;
     private final ValidateTokenQueryHandler validateTokenQueryHandler;
-    private final MockAuthService mockAuthService;
     
     public AuthController(
             LoginCommandHandler loginCommandHandler,
             SignupCommandHandler signupCommandHandler,
-            ValidateTokenQueryHandler validateTokenQueryHandler,
-            MockAuthService mockAuthService) {
+            RefreshTokenCommandHandler refreshTokenCommandHandler,
+            ValidateTokenQueryHandler validateTokenQueryHandler) {
         this.loginCommandHandler = loginCommandHandler;
         this.signupCommandHandler = signupCommandHandler;
+        this.refreshTokenCommandHandler = refreshTokenCommandHandler;
         this.validateTokenQueryHandler = validateTokenQueryHandler;
-        this.mockAuthService = mockAuthService;
     }
     
     /**
@@ -51,7 +48,7 @@ public class AuthController {
      * { "email": "user@example.com", "password": "password123" }
      * 
      * @param request The login request DTO
-     * @return Mono containing LoginResponseDto with token and user info
+     * @return Mono containing LoginResponseDto with access/refresh tokens and user info
      */
     @PostMapping("/login")
     public Mono<ResponseEntity<LoginResponseDto>> login(@RequestBody LoginRequestDto request) {
@@ -70,7 +67,7 @@ public class AuthController {
      * { "email": "user@example.com", "password": "password123" }
      * 
      * @param request The signup request DTO
-     * @return Mono containing LoginResponseDto with token and user info
+     * @return Mono containing LoginResponseDto with access/refresh tokens and user info
      */
     @PostMapping("/signup")
     public Mono<ResponseEntity<LoginResponseDto>> signup(@RequestBody SignupRequestDto request) {
@@ -101,10 +98,33 @@ public class AuthController {
     }
     
     /**
+     * Refresh token endpoint.
+     * 
+     * Request body:
+     * { "refreshToken": "jwt-refresh-token-string" }
+     * 
+     * @param request The refresh token request DTO
+     * @return Mono containing RefreshTokenResponseDto with new access token
+     */
+    @PostMapping("/refresh")
+    public Mono<ResponseEntity<RefreshTokenResponseDto>> refreshToken(@RequestBody RefreshTokenRequestDto request) {
+        if (request.getRefreshToken() == null || request.getRefreshToken().isBlank()) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
+        
+        RefreshTokenCommand command = new RefreshTokenCommand(request.getRefreshToken());
+        
+        return refreshTokenCommandHandler.handle(command)
+                .map(ResponseEntity::ok)
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
+    }
+    
+    /**
      * Token validation endpoint.
      * 
      * Request body:
-     * { "token": "uuid-token-string" }
+     * { "token": "jwt-token-string" }
      * 
      * @param request The token validation request
      * @return Mono containing ValidateTokenResponseDto with userId
@@ -129,20 +149,20 @@ public class AuthController {
     /**
      * User logout endpoint.
      * 
-     * Request body:
-     * { "token": "uuid-token-string" }
+     * Note: With stateless JWT tokens, logout is handled client-side by deleting tokens.
+     * This endpoint returns success to maintain API compatibility.
      * 
-     * @param request The logout request
      * @return Mono containing success response
      */
     @PostMapping("/logout")
-    public Mono<ResponseEntity<Void>> logout(@RequestBody ValidateTokenRequestDto request) {
-        mockAuthService.invalidateToken(request.getToken());
+    public Mono<ResponseEntity<Void>> logout() {
+        // Client-side logout - tokens are deleted on client
+        // No server-side action needed for stateless JWT tokens
         return Mono.just(ResponseEntity.ok().build());
     }
     
     /**
-     * Request DTO for token validation and logout.
+     * Request DTO for token validation.
      */
     public static class ValidateTokenRequestDto {
         private String token;

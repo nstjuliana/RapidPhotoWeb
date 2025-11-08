@@ -3,6 +3,7 @@ package com.rapidphotoupload.slices.photo;
 import com.rapidphotoupload.domain.photo.Photo;
 import com.rapidphotoupload.domain.photo.PhotoRepository;
 import com.rapidphotoupload.infrastructure.storage.StorageAdapter;
+import com.rapidphotoupload.shared.exceptions.AuthenticationException;
 import com.rapidphotoupload.shared.exceptions.EntityNotFoundException;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
@@ -12,9 +13,11 @@ import reactor.core.publisher.Mono;
  * 
  * This handler processes GetPhotoQuery requests by:
  * 1. Finding the photo by ID in the repository
- * 2. Converting Photo domain entity to PhotoDto
- * 3. Generating presigned download URL
- * 4. Throwing EntityNotFoundException if photo not found
+ * 2. Verifying the photo belongs to the authenticated user
+ * 3. Converting Photo domain entity to PhotoDto
+ * 4. Generating presigned download URL
+ * 5. Throwing EntityNotFoundException if photo not found
+ * 6. Throwing AuthenticationException if photo doesn't belong to user
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -37,8 +40,8 @@ public class GetPhotoQueryHandler {
     /**
      * Handles the get photo query.
      * 
-     * @param query The query containing photoId
-     * @return Mono containing PhotoDto if found, or error if not found
+     * @param query The query containing photoId and userId
+     * @return Mono containing PhotoDto if found and authorized, or error if not found/unauthorized
      */
     public Mono<PhotoDto> handle(GetPhotoQuery query) {
         return photoRepository.findById(query.getPhotoId())
@@ -46,6 +49,14 @@ public class GetPhotoQueryHandler {
                         "Photo",
                         query.getPhotoId().getValue().toString()
                 )))
+                .flatMap(photo -> {
+                    // Verify photo belongs to authenticated user
+                    if (!photo.getUserId().equals(query.getUserId())) {
+                        return Mono.error(new AuthenticationException(
+                                "Photo does not belong to authenticated user"));
+                    }
+                    return Mono.just(photo);
+                })
                 .flatMap(this::toDto);
     }
     

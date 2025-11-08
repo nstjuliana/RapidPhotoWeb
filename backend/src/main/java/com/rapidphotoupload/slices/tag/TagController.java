@@ -1,7 +1,9 @@
 package com.rapidphotoupload.slices.tag;
 
 import com.rapidphotoupload.domain.photo.PhotoId;
+import com.rapidphotoupload.infrastructure.security.SecurityUtils;
 import com.rapidphotoupload.slices.photo.PhotoDto;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
@@ -15,6 +17,7 @@ import reactor.core.publisher.Mono;
  * - Replacing all tags on a photo
  * 
  * All endpoints use reactive types (Mono) for non-blocking operations.
+ * All endpoints require JWT authentication and verify photo ownership.
  * 
  * @author RapidPhotoUpload Team
  * @since 1.0.0
@@ -35,6 +38,8 @@ public class TagController {
      * Request body should contain a JSON object with a "tags" array:
      * { "tags": ["tag1", "tag2", "tag3"] }
      * 
+     * User ID is extracted from JWT token in Authorization header.
+     * 
      * @param photoId The photo ID (UUID)
      * @param request The tag request DTO containing tags to add
      * @return Mono containing updated PhotoDto
@@ -44,16 +49,29 @@ public class TagController {
             @PathVariable String photoId,
             @RequestBody TagRequestDto request) {
         
-        TagPhotoCommand command = new TagPhotoCommand(
-                PhotoId.of(photoId),
-                request.getTags(),
-                TagOperation.ADD
-        );
+        PhotoId photoIdObj;
+        try {
+            photoIdObj = PhotoId.of(photoId);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
         
-        return tagPhotoCommandHandler.handle(command)
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    TagPhotoCommand command = new TagPhotoCommand(
+                            photoIdObj,
+                            userId,
+                            request.getTags(),
+                            TagOperation.ADD
+                    );
+                    
+                    return tagPhotoCommandHandler.handle(command);
+                })
                 .map(ResponseEntity::ok)
                 .onErrorReturn(com.rapidphotoupload.shared.exceptions.EntityNotFoundException.class,
-                        ResponseEntity.notFound().build());
+                        ResponseEntity.notFound().build())
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
     
     /**
@@ -61,6 +79,8 @@ public class TagController {
      * 
      * Request body should contain a JSON object with a "tags" array:
      * { "tags": ["tag1", "tag2"] }
+     * 
+     * User ID is extracted from JWT token in Authorization header.
      * 
      * @param photoId The photo ID (UUID)
      * @param request The tag request DTO containing tags to remove
@@ -71,16 +91,29 @@ public class TagController {
             @PathVariable String photoId,
             @RequestBody TagRequestDto request) {
         
-        TagPhotoCommand command = new TagPhotoCommand(
-                PhotoId.of(photoId),
-                request.getTags(),
-                TagOperation.REMOVE
-        );
+        PhotoId photoIdObj;
+        try {
+            photoIdObj = PhotoId.of(photoId);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
         
-        return tagPhotoCommandHandler.handle(command)
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    TagPhotoCommand command = new TagPhotoCommand(
+                            photoIdObj,
+                            userId,
+                            request.getTags(),
+                            TagOperation.REMOVE
+                    );
+                    
+                    return tagPhotoCommandHandler.handle(command);
+                })
                 .map(ResponseEntity::ok)
                 .onErrorReturn(com.rapidphotoupload.shared.exceptions.EntityNotFoundException.class,
-                        ResponseEntity.notFound().build());
+                        ResponseEntity.notFound().build())
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
     
     /**
@@ -88,6 +121,8 @@ public class TagController {
      * 
      * Request body should contain a JSON object with a "tags" array:
      * { "tags": ["newtag1", "newtag2"] }
+     * 
+     * User ID is extracted from JWT token in Authorization header.
      * 
      * @param photoId The photo ID (UUID)
      * @param request The tag request DTO containing new tags
@@ -98,16 +133,29 @@ public class TagController {
             @PathVariable String photoId,
             @RequestBody TagRequestDto request) {
         
-        TagPhotoCommand command = new TagPhotoCommand(
-                PhotoId.of(photoId),
-                request.getTags(),
-                TagOperation.REPLACE
-        );
+        PhotoId photoIdObj;
+        try {
+            photoIdObj = PhotoId.of(photoId);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
         
-        return tagPhotoCommandHandler.handle(command)
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    TagPhotoCommand command = new TagPhotoCommand(
+                            photoIdObj,
+                            userId,
+                            request.getTags(),
+                            TagOperation.REPLACE
+                    );
+                    
+                    return tagPhotoCommandHandler.handle(command);
+                })
                 .map(ResponseEntity::ok)
                 .onErrorReturn(com.rapidphotoupload.shared.exceptions.EntityNotFoundException.class,
-                        ResponseEntity.notFound().build());
+                        ResponseEntity.notFound().build())
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.FORBIDDEN).build());
     }
 }
 
