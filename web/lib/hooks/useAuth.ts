@@ -20,6 +20,7 @@ import { login as loginApi, signup as signupApi, logout as logoutApi } from '@/l
 import type { LoginResponse } from '@/lib/api/types';
 
 const AUTH_TOKEN_KEY = 'auth_token';
+const USER_ID_KEY = 'user_id';
 
 /**
  * Get authentication token from localStorage.
@@ -50,6 +51,24 @@ function removeToken(): void {
 }
 
 /**
+ * Set user ID in localStorage.
+ */
+function setUserId(userId: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(USER_ID_KEY, userId);
+  }
+}
+
+/**
+ * Remove user ID from localStorage.
+ */
+function removeUserId(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(USER_ID_KEY);
+  }
+}
+
+/**
  * Authentication hook.
  */
 export function useAuth() {
@@ -64,6 +83,7 @@ export function useAuth() {
     },
     onSuccess: (data: LoginResponse) => {
       setToken(data.token);
+      setUserId(data.userId);
       router.push('/gallery');
     },
   });
@@ -77,6 +97,7 @@ export function useAuth() {
     },
     onSuccess: (data: LoginResponse) => {
       setToken(data.token);
+      setUserId(data.userId);
       router.push('/gallery');
     },
   });
@@ -116,6 +137,7 @@ export function useAuth() {
       }
     }
     removeToken();
+    removeUserId();
     router.push('/login');
   };
 

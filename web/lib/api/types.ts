@@ -61,3 +61,33 @@ export interface ApiError {
   statusCode?: number;
 }
 
+/**
+ * Request DTO for upload endpoint.
+ */
+export interface UploadRequestDto {
+  filename: string;
+  contentType: string;
+  fileSize: number;
+  tags?: string[];
+}
+
+/**
+ * Response DTO for upload endpoint.
+ */
+export interface UploadResponseDto {
+  photoId: string;
+  presignedUrl: string;
+  s3Key: string;
+  expirationTime: number;
+}
+
+/**
+ * Response DTO for upload status endpoint.
+ */
+export interface UploadStatusDto {
+  photoId: string;
+  status: 'PENDING' | 'UPLOADING' | 'COMPLETED' | 'FAILED';
+  uploadDate: string;
+  errorMessage?: string;
+}
+

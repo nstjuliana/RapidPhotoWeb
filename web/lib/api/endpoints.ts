@@ -15,6 +15,9 @@ import type {
   SignupRequest,
   ValidateTokenRequest,
   ValidateTokenResponse,
+  UploadRequestDto,
+  UploadResponseDto,
+  UploadStatusDto,
 } from './types';
 
 /**
@@ -81,5 +84,51 @@ export async function validateToken(
 export async function logout(token: string): Promise<void> {
   const request: ValidateTokenRequest = { token };
   await apiClient.post('/api/auth/logout', request);
+}
+
+/**
+ * Request presigned URL for photo upload.
+ * 
+ * @param request Upload request containing file metadata
+ * @param userId User ID for authentication (currently using x-user-id header)
+ * @returns Promise resolving to UploadResponseDto with presigned URL
+ */
+export async function requestPresignedUrl(
+  request: UploadRequestDto,
+  userId: string
+): Promise<UploadResponseDto> {
+  const response = await apiClient.post<UploadResponseDto>(
+    '/api/uploads',
+    request,
+    {
+      headers: {
+        'x-user-id': userId,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Report upload completion to backend.
+ * 
+ * @param photoId Photo ID to mark as completed
+ * @returns Promise resolving when completion is reported
+ */
+export async function reportUploadComplete(photoId: string): Promise<void> {
+  await apiClient.post(`/api/uploads/${photoId}/complete`);
+}
+
+/**
+ * Get upload status for a photo.
+ * 
+ * @param photoId Photo ID to check status for
+ * @returns Promise resolving to UploadStatusDto with current status
+ */
+export async function getUploadStatus(photoId: string): Promise<UploadStatusDto> {
+  const response = await apiClient.get<UploadStatusDto>(
+    `/api/uploads/${photoId}/status`
+  );
+  return response.data;
 }
 
