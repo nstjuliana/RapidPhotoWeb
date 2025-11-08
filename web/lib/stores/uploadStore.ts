@@ -45,6 +45,7 @@ interface UploadStore {
   uploadQueue: UploadItem[];
   batchTags: string[];
   selectedPhotos: Set<string>;
+  isSelectMode: boolean;
 
   // Actions
   addFiles: (files: File[]) => void;
@@ -58,6 +59,8 @@ interface UploadStore {
   setSelectedPhotos: (photos: Set<string>) => void;
   togglePhotoSelection: (photoId: string) => void;
   clearSelection: () => void;
+  toggleSelectMode: () => void;
+  setSelectMode: (enabled: boolean) => void;
 
   // Selectors
   getPendingUploads: () => UploadItem[];
@@ -81,6 +84,7 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
   uploadQueue: [],
   batchTags: [],
   selectedPhotos: new Set(),
+  isSelectMode: false,
 
   addFiles: (files) =>
     set((state) => {
@@ -157,6 +161,21 @@ export const useUploadStore = create<UploadStore>((set, get) => ({
   clearSelection: () =>
     set({
       selectedPhotos: new Set(),
+    }),
+
+  toggleSelectMode: () =>
+    set((state) => {
+      const newMode = !state.isSelectMode;
+      return {
+        isSelectMode: newMode,
+        selectedPhotos: newMode ? state.selectedPhotos : new Set(),
+      };
+    }),
+
+  setSelectMode: (enabled) =>
+    set({
+      isSelectMode: enabled,
+      selectedPhotos: enabled ? get().selectedPhotos : new Set(),
     }),
 
   // Selectors

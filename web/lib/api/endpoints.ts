@@ -18,6 +18,9 @@ import type {
   UploadRequestDto,
   UploadResponseDto,
   UploadStatusDto,
+  PhotoDto,
+  ListPhotosParams,
+  DownloadUrlResponse,
 } from './types';
 
 /**
@@ -128,6 +131,118 @@ export async function reportUploadComplete(photoId: string): Promise<void> {
 export async function getUploadStatus(photoId: string): Promise<UploadStatusDto> {
   const response = await apiClient.get<UploadStatusDto>(
     `/api/uploads/${photoId}/status`
+  );
+  return response.data;
+}
+
+/**
+ * List photos for a user with pagination and optional tag filtering.
+ * 
+ * @param params ListPhotosParams containing userId, page, size, sortBy, and tags
+ * @returns Promise resolving to array of PhotoDto
+ */
+export async function listPhotos(
+  params: ListPhotosParams
+): Promise<PhotoDto[]> {
+  const { userId, page = 0, size = 20, sortBy, tags } = params;
+  
+  const queryParams: Record<string, string> = {
+    userId,
+    page: page.toString(),
+    size: size.toString(),
+  };
+  
+  if (sortBy) {
+    queryParams.sortBy = sortBy;
+  }
+  
+  if (tags && tags.length > 0) {
+    queryParams.tags = tags.join(',');
+  }
+  
+  const response = await apiClient.get<PhotoDto[]>('/api/photos', {
+    params: queryParams,
+  });
+  
+  return response.data;
+}
+
+/**
+ * Get a single photo by ID.
+ * 
+ * @param photoId Photo ID to retrieve
+ * @returns Promise resolving to PhotoDto
+ */
+export async function getPhoto(photoId: string): Promise<PhotoDto> {
+  const response = await apiClient.get<PhotoDto>(`/api/photos/${photoId}`);
+  return response.data;
+}
+
+/**
+ * Get presigned download URL for a photo.
+ * 
+ * @param photoId Photo ID to get download URL for
+ * @returns Promise resolving to DownloadUrlResponse
+ */
+export async function getPhotoDownloadUrl(
+  photoId: string
+): Promise<DownloadUrlResponse> {
+  const response = await apiClient.get<DownloadUrlResponse>(
+    `/api/photos/${photoId}/download`
+  );
+  return response.data;
+}
+
+/**
+ * Add tags to a photo.
+ * 
+ * @param photoId Photo ID to add tags to
+ * @param tags Array of tags to add
+ * @returns Promise resolving to updated PhotoDto
+ */
+export async function addPhotoTags(
+  photoId: string,
+  tags: string[]
+): Promise<PhotoDto> {
+  const response = await apiClient.post<PhotoDto>(
+    `/api/photos/${photoId}/tags`,
+    { tags }
+  );
+  return response.data;
+}
+
+/**
+ * Remove tags from a photo.
+ * 
+ * @param photoId Photo ID to remove tags from
+ * @param tags Array of tags to remove
+ * @returns Promise resolving to updated PhotoDto
+ */
+export async function removePhotoTags(
+  photoId: string,
+  tags: string[]
+): Promise<PhotoDto> {
+  const response = await apiClient.delete<PhotoDto>(
+    `/api/photos/${photoId}/tags`,
+    { data: { tags } }
+  );
+  return response.data;
+}
+
+/**
+ * Replace all tags on a photo.
+ * 
+ * @param photoId Photo ID to replace tags on
+ * @param tags Array of new tags
+ * @returns Promise resolving to updated PhotoDto
+ */
+export async function replacePhotoTags(
+  photoId: string,
+  tags: string[]
+): Promise<PhotoDto> {
+  const response = await apiClient.put<PhotoDto>(
+    `/api/photos/${photoId}/tags`,
+    { tags }
   );
   return response.data;
 }

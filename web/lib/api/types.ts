@@ -91,3 +91,42 @@ export interface UploadStatusDto {
   errorMessage?: string;
 }
 
+/**
+ * Photo DTO matching backend PhotoDto.
+ */
+export interface PhotoDto {
+  id: string;
+  filename: string;
+  s3Key: string;
+  uploadDate: string; // ISO 8601 date string
+  tags: string[];
+  status: string;
+  downloadUrl: string;
+}
+
+/**
+ * Parameters for listing photos.
+ */
+export interface ListPhotosParams {
+  userId: string;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  tags?: string[]; // Will be converted to comma-separated string
+}
+
+/**
+ * Request DTO for tag operations.
+ */
+export interface TagOperationRequest {
+  tags: string[];
+}
+
+/**
+ * Response DTO for download URL endpoint.
+ */
+export interface DownloadUrlResponse {
+  downloadUrl: string;
+  expirationTime: number;
+}
+

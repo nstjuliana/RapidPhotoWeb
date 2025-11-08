@@ -1,50 +1,87 @@
 /**
  * Gallery page component for RapidPhotoUpload web application.
  * 
- * Placeholder page for photo gallery feature.
- * Full implementation coming in Phase 7.
+ * Main gallery page displaying photo grid with filters, search, and multi-select.
+ * 
+ * Features:
+ * - Photo grid with infinite scroll
+ * - Tag filtering
+ * - Search functionality
+ * - Multi-select mode for batch operations
+ * - Selection toolbar for batch actions
  */
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+'use client';
+
+import { useEffect } from 'react';
+import { useFilterStore } from '@/lib/stores/filterStore';
+import { useUploadStore } from '@/lib/stores/uploadStore';
+import { PhotoGrid } from './components/PhotoGrid';
+import { FilterBar } from './components/FilterBar';
+import { SearchBar } from './components/SearchBar';
+import { SelectionToolbar } from './components/SelectionToolbar';
+
+/**
+ * Get user ID from localStorage.
+ */
+function getUserId(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return localStorage.getItem('user_id');
+}
 
 export default function GalleryPage() {
+  const userId = getUserId();
+  const selectedTags = useFilterStore((state) => state.selectedTags);
+  const searchQuery = useFilterStore((state) => state.searchQuery);
+  const isSelectMode = useUploadStore((state) => state.isSelectMode);
+  const selectedPhotos = useUploadStore((state) => state.selectedPhotos);
+  const toggleSelectMode = useUploadStore((state) => state.toggleSelectMode);
+
+  // Prepare filters for photo query
+  const filters = {
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    search: searchQuery.trim() || undefined,
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gallery</h1>
-        <p className="text-gray-600 mt-2">View and manage your uploaded photos</p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Gallery</h1>
+          <p className="mt-2 text-gray-600">
+            View and manage your uploaded photos
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleSelectMode}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              isSelectMode
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {isSelectMode ? 'Cancel Selection' : 'Select Photos'}
+          </button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Photo Gallery</CardTitle>
-          <CardDescription>Coming in Phase 7</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <div className="inline-block p-4 bg-gray-100 rounded-full mb-4">
-              <svg
-                className="w-12 h-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <p className="text-gray-500 text-lg">Photo Gallery feature will be available here</p>
-            <p className="text-gray-400 text-sm mt-2">
-              You'll be able to browse, filter, and manage your uploaded photos
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Filters and Search */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <FilterBar userId={userId} />
+        <SearchBar />
+      </div>
+
+      {/* Photo Grid */}
+      <PhotoGrid userId={userId} filters={filters} />
+
+      {/* Selection Toolbar */}
+      {isSelectMode && selectedPhotos.size > 0 && (
+        <SelectionToolbar />
+      )}
     </div>
   );
 }
-
