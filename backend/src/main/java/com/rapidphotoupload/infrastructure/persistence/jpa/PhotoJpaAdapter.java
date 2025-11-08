@@ -84,7 +84,9 @@ public class PhotoJpaAdapter implements PhotoRepository {
                         sortField = "uploadDate";
                     }
                     
-                    Sort sort = Sort.by(Sort.Direction.DESC, sortField);
+                    // Sort by primary field DESC, then by id DESC for consistent ordering
+                    Sort sort = Sort.by(Sort.Direction.DESC, sortField)
+                            .and(Sort.by(Sort.Direction.DESC, "id"));
                     Pageable pageable = PageRequest.of(page, size, sort);
                     
                     var pageResult = jpaRepository.findByUserId(userId.getValue(), pageable);
@@ -115,7 +117,9 @@ public class PhotoJpaAdapter implements PhotoRepository {
                         return java.util.Collections.<PhotoJpaEntity>emptyList();
                     }
                     
-                    Sort sort = Sort.by(Sort.Direction.DESC, "uploadDate");
+                    // Sort by uploadDate DESC, then by id DESC for consistent ordering
+                    Sort sort = Sort.by(Sort.Direction.DESC, "uploadDate")
+                            .and(Sort.by(Sort.Direction.DESC, "id"));
                     Pageable pageable = PageRequest.of(page, size, sort);
                     
                     var pageResult = jpaRepository.findByUserIdAndTags(

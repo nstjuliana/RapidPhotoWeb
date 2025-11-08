@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
@@ -19,16 +19,36 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated } = useAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const router = useRouter();
+  const { isAuthenticated: checkAuth } = useAuth();
 
+  // Check authentication only on client side to avoid hydration mismatch
   useEffect(() => {
-    if (!isAuthenticated()) {
+    const authStatus = checkAuth();
+    setIsAuthenticated(authStatus);
+    setIsChecking(false);
+
+    if (!authStatus) {
       router.push('/login');
     }
-  }, [isAuthenticated, router]);
+  }, [checkAuth, router]);
 
-  if (!isAuthenticated()) {
+  // Show loading state during initial check (matches server render)
+  if (isChecking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, show loading (redirect will happen)
+  if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">

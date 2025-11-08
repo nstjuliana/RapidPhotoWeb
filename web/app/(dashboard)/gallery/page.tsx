@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFilterStore } from '@/lib/stores/filterStore';
 import { useUploadStore } from '@/lib/stores/uploadStore';
 import { PhotoGrid } from './components/PhotoGrid';
@@ -21,23 +21,19 @@ import { FilterBar } from './components/FilterBar';
 import { SearchBar } from './components/SearchBar';
 import { SelectionToolbar } from './components/SelectionToolbar';
 
-/**
- * Get user ID from localStorage.
- */
-function getUserId(): string | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  return localStorage.getItem('user_id');
-}
-
 export default function GalleryPage() {
-  const userId = getUserId();
+  const [userId, setUserId] = useState<string | null>(null);
   const selectedTags = useFilterStore((state) => state.selectedTags);
   const searchQuery = useFilterStore((state) => state.searchQuery);
   const isSelectMode = useUploadStore((state) => state.isSelectMode);
   const selectedPhotos = useUploadStore((state) => state.selectedPhotos);
   const toggleSelectMode = useUploadStore((state) => state.toggleSelectMode);
+
+  // Read userId from localStorage only on client side to avoid hydration mismatch
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('user_id');
+    setUserId(storedUserId);
+  }, []);
 
   // Prepare filters for photo query
   const filters = {
