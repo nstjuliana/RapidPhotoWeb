@@ -16,12 +16,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * REST controller for photo query endpoints.
+ * REST controller for photo query and command endpoints.
  * 
  * Provides endpoints for:
  * - Listing photos with pagination and tag filtering
  * - Retrieving single photo details
  * - Getting presigned download URLs
+ * - Deleting photos
  * 
  * All endpoints use reactive types (Mono/Flux) for non-blocking operations.
  * All endpoints require JWT authentication and filter results by authenticated user.
@@ -35,6 +36,7 @@ public class PhotoController {
     
     private final ListPhotosQueryHandler listPhotosQueryHandler;
     private final GetPhotoQueryHandler getPhotoQueryHandler;
+    private final DeletePhotoCommandHandler deletePhotoCommandHandler;
     private final StorageAdapter storageAdapter;
     
     private static final int DEFAULT_PAGE_SIZE = 20;
@@ -44,9 +46,11 @@ public class PhotoController {
     public PhotoController(
             ListPhotosQueryHandler listPhotosQueryHandler,
             GetPhotoQueryHandler getPhotoQueryHandler,
+            DeletePhotoCommandHandler deletePhotoCommandHandler,
             StorageAdapter storageAdapter) {
         this.listPhotosQueryHandler = listPhotosQueryHandler;
         this.getPhotoQueryHandler = getPhotoQueryHandler;
+        this.deletePhotoCommandHandler = deletePhotoCommandHandler;
         this.storageAdapter = storageAdapter;
     }
     
@@ -168,6 +172,36 @@ public class PhotoController {
                         return ResponseEntity.ok(response);
                     })
                 )
+                .onErrorReturn(EntityNotFoundException.class,
+                        ResponseEntity.notFound().build())
+                .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,
+                        ResponseEntity.status(HttpStatus.FORBIDDEN).build());
+    }
+    
+    /**
+     * Deletes a photo by ID.
+     * 
+     * Only deletes photo if it belongs to the authenticated user.
+     * Deletes both the photo file from S3 storage and the database record.
+     * 
+     * @param photoId The photo ID (UUID)
+     * @return Mono containing 204 No Content on success, or error response
+     */
+    @DeleteMapping("/{photoId}")
+    public Mono<ResponseEntity<Void>> deletePhoto(@PathVariable String photoId) {
+        PhotoId photoIdObj;
+        try {
+            photoIdObj = PhotoId.of(photoId);
+        } catch (IllegalArgumentException e) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
+        
+        return SecurityUtils.getCurrentUserId()
+                .flatMap(userId -> {
+                    DeletePhotoCommand command = new DeletePhotoCommand(photoIdObj, userId);
+                    return deletePhotoCommandHandler.handle(command);
+                })
+                .then(Mono.just(ResponseEntity.noContent().<Void>build()))
                 .onErrorReturn(EntityNotFoundException.class,
                         ResponseEntity.notFound().build())
                 .onErrorReturn(com.rapidphotoupload.shared.exceptions.AuthenticationException.class,

@@ -277,3 +277,16 @@ export async function replacePhotoTags(
   return response.data;
 }
 
+/**
+ * Delete a photo by ID.
+ * 
+ * Deletes both the photo file from S3 storage and the database record.
+ * Only deletes photo if it belongs to the authenticated user.
+ * 
+ * @param photoId Photo ID to delete
+ * @returns Promise resolving when deletion is complete
+ */
+export async function deletePhoto(photoId: string): Promise<void> {
+  await apiClient.delete(`/api/photos/${photoId}`);
+}
+
