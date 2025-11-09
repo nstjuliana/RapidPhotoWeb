@@ -62,7 +62,8 @@ public class ListPhotosQueryHandler {
         }
         
         // Convert each photo to DTO with download URL
-        return photos.flatMap(this::toDto);
+        // Use flatMapSequential to preserve order while still processing concurrently
+        return photos.flatMapSequential(this::toDto);
     }
     
     /**

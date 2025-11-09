@@ -81,7 +81,8 @@ public class PhotoController {
         // Validate and normalize parameters
         final int normalizedPage = page < 0 ? 0 : page;
         final int normalizedSize = size < 1 ? DEFAULT_PAGE_SIZE : (size > MAX_PAGE_SIZE ? MAX_PAGE_SIZE : size);
-        final String normalizedSortBy = sortBy;
+        // Normalize sortBy to ensure deterministic ordering (default to uploadDate)
+        final String normalizedSortBy = (sortBy == null || sortBy.isBlank()) ? "uploadDate" : sortBy;
         
         // Parse tags from comma-separated string
         final Set<String> normalizedTagSet;
